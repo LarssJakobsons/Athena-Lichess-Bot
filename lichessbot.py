@@ -1,62 +1,34 @@
-# bot created using the berserk-downstream library
+version = '1.0.0'
 
-bot_version = "0.1.0"
 
-# import all the necessary libraries
-import berserk as lichess
-import os
+import requests
+import json
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
-from random import choice
-import schedule
+import os
 
-# load the token from the .env file
 load_dotenv()
-token = os.environ["LICHESS_API"]
-team_password = os.environ["TEAM_PASSWORD"]
 
+auth_token = os.environ['AUTH_TOKEN_PERSONAL']
+print(auth_token)
+auth = {'Authorization': f'Bearer {auth_token}'}
 
-def join(teams, team_id, message=None, password=None):
-    """Join a team.
-    Temporary fix provided by Sol
-    """
-    path = f"/team/{team_id}/join"
-    payload = {
-        "message": message,
-        "password": password,
-    }
-    return teams._r.post(path, json=payload)["ok"]
+get_acc = 'https://lichess.org/api/account'
+acc_info = requests.get(get_acc, headers=auth)
 
+get_team = 'https://lichess.org/api/team/athena_bot-dev-playground'
+team_info = requests.get(get_team, headers=auth)
 
-# connect to lichess and start a bot session
-session = lichess.TokenSession(token)
-client = lichess.Client(session=session)
-print(f'{client.account.get()["username"]} has connected to lichess')
+print(json.dumps(team_info.json(), indent=4))
 
-# join a team if needed
-# join(client.teams, "athena_bot-dev-playground", message=None, password=team_password)
+create_swiss = 'https://lichess.org/api/swiss/new/athena_bot-dev-playground'
+tournament_data ={
+    "name": "Athena Bot Swiss",
+    "rated": "false",
+    "clock.limit": "120",
+    "clock.increment": "5",
+    "nbRounds": "3",
+    "variant": "standard",
+}
+swiss_info = requests.post(create_swiss, headers=auth, data=tournament_data)
 
-# create a swiss tournament in the team
-def create_tournament():
-    tournament = client.teams.create_swiss(
-        teamId="athena_bot-dev-playground",  # team id
-        name="Test tournament",  # tournament name
-        clock={"increment": 0, "limit": 7},  # clock settings
-        nb_rounds=10,  # maximum number of rounds
-        startsAt=datetime.utcnow() + timedelta(days=5),  # tournament date
-        roundInterval=10,  # time between rounds
-        password=None,  # tournament password
-        variant="standard",  # variant name
-        rated=True,  # affects ratings
-        conditions={"maxRating": 3000, "minRating": 0, "nbRatedGames": 0},  # conditions for joining
-    )
-    # send a message to Larss_J on lichess that contains the tournament link
-    client.messaging.send("Larss_J", f"https://lichess.org/swiss/{tournament['id']}")
-
-
-# create a tournament every saturday at 11:00 UTC using task scheduler
-schedule.every().saturday.at("11:00").do(create_tournament, "test")
-
-# run the task scheduler
-while True:
-    schedule.run_pending()
+print(json.dumps(swiss_info.json(), indent=4))
